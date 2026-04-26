@@ -27,9 +27,9 @@ def main():
     if not token:
         raise ValueError("TELEGRAM_BOT_TOKEN is not set. Check your .env file.")
 
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
-        raise ValueError("ANTHROPIC_API_KEY is not set. Check your .env file.")
+        raise ValueError("GEMINI_API_KEY is not set. Check your .env file.")
 
     app = create_application(token)
 

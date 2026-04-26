@@ -1,16 +1,16 @@
 # Personal Daily Planner — Telegram Bot
 
-A Telegram bot powered by Claude AI that generates prioritized daily task lists, integrates with Google Calendar, and sends scheduled morning/evening briefings.
+A Telegram bot powered by Google Gemini AI (free tier) that generates prioritized daily task lists, integrates with Google Calendar, and sends scheduled morning/evening briefings.
 
 ---
 
 ## Features
 
-- **AI-generated task plans** — Claude analyzes your calendar events and creates a prioritized task list each morning
+- **AI-generated task plans** — Gemini analyzes your calendar events and creates a prioritized task list each morning
 - **Google Calendar integration** — fetches today's and this week's events; flags tasks that may conflict with meetings
 - **Morning & evening briefings** — automated messages at configurable times via APScheduler
 - **Task management** — add, complete, and skip tasks via Telegram commands
-- **End-of-day summaries** — Claude writes a short reflection on what you accomplished
+- **End-of-day summaries** — Gemini writes a short reflection on what you accomplished
 - **Persistent storage** — tasks and settings survive restarts (SQLite)
 - **Single-user security** — the bot only responds to the registered chat ID
 
@@ -22,7 +22,7 @@ A Telegram bot powered by Claude AI that generates prioritized daily task lists,
 |---|---|
 | Python 3.11+ | Earlier versions untested |
 | Telegram account | [telegram.org](https://telegram.org) |
-| Anthropic API key | [console.anthropic.com](https://console.anthropic.com) |
+| Google Gemini API key | Free at [aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey) |
 | Google Cloud account | Only needed for calendar integration |
 
 ---
@@ -56,7 +56,7 @@ Edit `.env`:
 ```env
 TELEGRAM_BOT_TOKEN=123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11
 TELEGRAM_CHAT_ID=          # optional — set automatically on first /start
-ANTHROPIC_API_KEY=sk-ant-...
+GEMINI_API_KEY=AIza...
 ```
 
 **How to find your chat ID:** Leave `TELEGRAM_CHAT_ID` blank. Start the bot (step 4), send `/start` to your bot in Telegram, and the bot will register your chat ID automatically.
@@ -131,11 +131,11 @@ Restart the bot and send `/week`. You should see your upcoming calendar events.
 |---|---|
 | `/start` | Register your chat ID and display the command list |
 | `/plan` | Generate (or display) today's prioritized task list |
-| `/plan --refresh` | Force Claude to regenerate the task list |
+| `/plan --refresh` | Force Gemini to regenerate the task list |
 | `/add [description]` | Add a new task for today |
 | `/done [#]` | Mark task number `#` as complete ✅ |
 | `/skip [#]` | Mark task number `#` as skipped ⏩ |
-| `/review` | Generate an end-of-day summary with Claude |
+| `/review` | Generate an end-of-day summary with Gemini |
 | `/week` | Show this week's Google Calendar events |
 | `/settime [morning\|evening] [HH:MM]` | Change the briefing time |
 | `/timezone [tz]` | Set your timezone (e.g. `America/New_York`) |
@@ -159,7 +159,7 @@ The bot sends two automatic messages each day:
 | Briefing | Default time | Contents |
 |---|---|---|
 | Morning | 08:00 | Calendar events + AI-generated task plan |
-| Evening | 20:00 | Task status summary + Claude's end-of-day reflection |
+| Evening | 20:00 | Task status summary + Gemini's end-of-day reflection |
 
 Change the times at any time with `/settime`:
 
@@ -179,7 +179,7 @@ Times are stored in the database and survive restarts. The scheduler reloads imm
 | Variable | Required | Description |
 |---|---|---|
 | `TELEGRAM_BOT_TOKEN` | Yes | Token from BotFather |
-| `ANTHROPIC_API_KEY` | Yes | Anthropic API key |
+| `GEMINI_API_KEY` | Yes | Google Gemini API key (free) |
 | `TELEGRAM_CHAT_ID` | No | Pre-register your chat ID (otherwise set via `/start`) |
 | `GOOGLE_CREDENTIALS_FILE` | No | Path to OAuth credentials JSON (default: `credentials.json`) |
 
@@ -226,7 +226,7 @@ personal-daily-plan-agent/
     ├── __init__.py
     ├── bot.py              # Telegram command handlers
     ├── calendar_client.py  # Google Calendar API client
-    ├── planner.py          # Claude AI integration
+    ├── planner.py          # Gemini AI integration
     ├── scheduler.py        # APScheduler morning/evening jobs
     └── storage.py          # SQLite persistence layer
 ```
@@ -302,7 +302,7 @@ python main.py
 - **Keep `.env` private** — never commit it to version control. The `.gitignore` should exclude it.
 - **Keep `credentials.json` and `token.json` private** — these grant read access to your Google Calendar.
 - **Principle of least privilege** — the Google Calendar scope is `calendar.readonly`; the bot cannot modify your calendar.
-- **Anthropic API key** — treat it like a password. Rotate it immediately if exposed.
+- **Gemini API key** — treat it like a password. Rotate it immediately if exposed.
 
 ---
 
@@ -337,7 +337,7 @@ Your `.env` file is missing or not being loaded. Ensure `.env` exists in the pro
 ### "No tasks generated" in morning briefing
 
 - Send `/plan` manually to test plan generation
-- Check that `ANTHROPIC_API_KEY` is valid
+- Check that `GEMINI_API_KEY` is valid and not expired
 - Look for error messages in the bot logs (`logging.ERROR` entries)
 
 ### Tasks duplicated after `/plan`
@@ -348,12 +348,12 @@ Your `.env` file is missing or not being loaded. Ensure `.env` exists in the pro
 
 ## AI Model
 
-This bot uses **Claude Opus 4.7** (`claude-opus-4-7`) for:
+This bot uses **Google Gemini 1.5 Flash** (`gemini-1.5-flash`) — a free model via Google AI Studio — for:
 
 - Generating prioritized daily task lists from your calendar events and goals
 - Writing end-of-day summaries that reflect on completed, skipped, and pending tasks
 
-System prompts use **prompt caching** (`cache_control: ephemeral`) to reduce API costs on repeated calls with the same instructions.
+Get your free API key at [aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey). The free tier allows up to 15 requests per minute and 1 million tokens per day — more than enough for a personal planner.
 
 ---
 

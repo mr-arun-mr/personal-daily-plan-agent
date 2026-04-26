@@ -1,10 +1,10 @@
 import os
 import logging
-import anthropic
+import google.generativeai as genai
 
 logger = logging.getLogger(__name__)
 
-client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 
 _PLAN_SYSTEM = """You are a personal daily planning assistant. Create clear, prioritized task lists.
 
@@ -19,9 +19,19 @@ Rules:
 _SUMMARY_SYSTEM = """You are a daily planning assistant. Write brief, honest end-of-day summaries.
 Keep it under 50 words. Be encouraging but factual. No bullet points — just 2-3 sentences."""
 
+_plan_model = genai.GenerativeModel(
+    model_name="gemini-1.5-flash",
+    system_instruction=_PLAN_SYSTEM,
+)
+
+_summary_model = genai.GenerativeModel(
+    model_name="gemini-1.5-flash",
+    system_instruction=_SUMMARY_SYSTEM,
+)
+
 
 def generate_daily_plan(calendar_events: list[dict], user_tasks: list[str]) -> list[str]:
-    """Use Claude to generate a prioritized task list for the day."""
+    """Use Gemini to generate a prioritized task list for the day."""
     events_text = "\n".join(f"- {e['time']}: {e['title']}" for e in calendar_events) or "No events today"
     tasks_text = "\n".join(f"- {t}" for t in user_tasks) or "No additional tasks provided"
 
@@ -34,18 +44,8 @@ Tasks to plan:
 Generate the prioritized task list."""
 
     try:
-        message = client.messages.create(
-            model="claude-opus-4-7",
-            max_tokens=512,
-            system=[{
-                "type": "text",
-                "text": _PLAN_SYSTEM,
-                "cache_control": {"type": "ephemeral"},
-            }],
-            messages=[{"role": "user", "content": prompt}],
-        )
-
-        response_text = message.content[0].text
+        response = _plan_model.generate_content(prompt)
+        response_text = response.text
         tasks = []
         for line in response_text.strip().splitlines():
             line = line.strip()
@@ -54,7 +54,6 @@ Generate the prioritized task list."""
                 desc = desc.strip()
                 if desc:
                     tasks.append(desc)
-
         return tasks
     except Exception as e:
         logger.error("Failed to generate plan: %s", e)
@@ -64,30 +63,20 @@ Generate the prioritized task list."""
 def generate_evening_summary(
     completed: list[str], skipped: list[str], pending: list[str]
 ) -> str:
-    """Use Claude to write a brief end-of-day summary."""
+    """Use Gemini to write a brief end-of-day summary."""
     completed_text = "\n".join(f"- {t}" for t in completed) or "None"
     skipped_text = "\n".join(f"- {t}" for t in skipped) or "None"
     pending_text = "\n".join(f"- {t}" for t in pending) or "None"
 
+    prompt = (
+        f"Completed:\n{completed_text}\n\n"
+        f"Skipped:\n{skipped_text}\n\n"
+        f"Pending:\n{pending_text}"
+    )
+
     try:
-        message = client.messages.create(
-            model="claude-opus-4-7",
-            max_tokens=150,
-            system=[{
-                "type": "text",
-                "text": _SUMMARY_SYSTEM,
-                "cache_control": {"type": "ephemeral"},
-            }],
-            messages=[{
-                "role": "user",
-                "content": (
-                    f"Completed:\n{completed_text}\n\n"
-                    f"Skipped:\n{skipped_text}\n\n"
-                    f"Pending:\n{pending_text}"
-                ),
-            }],
-        )
-        return message.content[0].text.strip()
+        response = _summary_model.generate_content(prompt)
+        return response.text.strip()
     except Exception as e:
         logger.error("Failed to generate summary: %s", e)
         total = len(completed) + len(skipped) + len(pending)
