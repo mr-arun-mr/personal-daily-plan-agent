@@ -27,53 +27,147 @@ A Telegram bot powered by Google Gemini AI (free tier) that generates prioritize
 
 ---
 
-## Quick Start
+## Local Setup (macOS)
 
-### 1. Clone and install
+### 1. Install Python via Homebrew
+
+If you don't have Homebrew installed:
+
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+
+Then install Python:
+
+```bash
+brew install python@3.11
+```
+
+Verify:
+
+```bash
+python3.11 --version
+```
+
+### 2. Clone the repo and create a virtual environment
 
 ```bash
 git clone <your-repo-url>
 cd personal-daily-plan-agent
-python -m venv .venv
-source .venv/bin/activate      # Windows: .venv\Scripts\activate
+python3.11 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 2. Create a Telegram bot
+You'll need to run `source .venv/bin/activate` each time you open a new terminal session. Or use the full path: `.venv/bin/python main.py`.
+
+### 3. Create a Telegram bot
 
 1. Open Telegram and search for **@BotFather**
 2. Send `/newbot` and follow the prompts
 3. Copy the token (looks like `123456:ABC-DEF1234...`)
 
-### 3. Configure environment variables
+### 4. Configure environment variables
 
 ```bash
 cp .env.example .env
+open -e .env        # opens in TextEdit; or use: nano .env
 ```
 
-Edit `.env`:
+Fill in your values:
 
 ```env
 TELEGRAM_BOT_TOKEN=123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11
-TELEGRAM_CHAT_ID=          # optional — set automatically on first /start
+TELEGRAM_CHAT_ID=          # leave blank — set automatically on first /start
 GEMINI_API_KEY=AIza...
 ```
 
-**How to find your chat ID:** Leave `TELEGRAM_CHAT_ID` blank. Start the bot (step 4), send `/start` to your bot in Telegram, and the bot will register your chat ID automatically.
-
-### 4. Run the bot
+### 5. Run the bot
 
 ```bash
+source .venv/bin/activate
 python main.py
 ```
 
-### 5. Send `/start` to your bot in Telegram
+### 6. Send `/start` to your bot in Telegram
 
 The bot will register your chat ID and display the available commands.
 
-### 6. Generate your first plan
+### 7. Generate your first plan
 
 Send `/plan` to generate today's task list.
+
+---
+
+## Running in the Background on Mac
+
+To keep the bot running after you close the terminal, use **launchd** — macOS's built-in service manager.
+
+### Step 1 — Create the plist file
+
+Create `~/Library/LaunchAgents/com.dailyplanner.bot.plist`:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.dailyplanner.bot</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/path/to/personal-daily-plan-agent/.venv/bin/python</string>
+    <string>/path/to/personal-daily-plan-agent/main.py</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/path/to/personal-daily-plan-agent</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>TELEGRAM_BOT_TOKEN</key>    <string>YOUR_TOKEN_HERE</string>
+    <key>GEMINI_API_KEY</key>        <string>YOUR_KEY_HERE</string>
+  </dict>
+
+  <key>StandardOutPath</key>
+  <string>/path/to/personal-daily-plan-agent/bot.log</string>
+  <key>StandardErrorPath</key>
+  <string>/path/to/personal-daily-plan-agent/bot.err</string>
+
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+</dict>
+</plist>
+```
+
+Replace `/path/to/personal-daily-plan-agent` with the actual path (run `pwd` inside the project folder to get it).
+
+### Step 2 — Load and start
+
+```bash
+launchctl load ~/Library/LaunchAgents/com.dailyplanner.bot.plist
+launchctl start com.dailyplanner.bot
+```
+
+### Step 3 — Check status and logs
+
+```bash
+launchctl list | grep dailyplanner     # should show PID if running
+tail -f /path/to/personal-daily-plan-agent/bot.log
+```
+
+### Stop / restart
+
+```bash
+launchctl stop com.dailyplanner.bot
+launchctl unload ~/Library/LaunchAgents/com.dailyplanner.bot.plist   # remove from autostart
+```
+
+> The bot starts automatically at login and restarts if it crashes (`KeepAlive: true`).
 
 ---
 
@@ -233,11 +327,46 @@ personal-daily-plan-agent/
 
 ---
 
-## Running as a Background Service
+## Free Hosting Options
 
-### Option A — systemd (Linux servers)
+If you want the bot to run 24/7 without leaving your Mac on, here are genuinely free cloud options ranked by ease of setup.
 
-Create `/etc/systemd/system/daily-planner.service`:
+---
+
+### Option 1 — Oracle Cloud Always Free (Recommended)
+
+Oracle's Always Free tier gives you a real Linux VM with no time limit or credit card expiry requirement. It's the most generous free cloud tier available.
+
+**What you get:** 2 AMD VMs (1 OCPU, 1 GB RAM each) or up to 4 ARM VMs — free forever.
+
+**Setup:**
+
+1. Sign up at [cloud.oracle.com](https://cloud.oracle.com) — requires a credit card for identity verification but is never charged on Always Free resources
+2. Create a VM instance: **Compute → Instances → Create Instance**
+   - Shape: `VM.Standard.E2.1.Micro` (Always Free)
+   - Image: Oracle Linux or Ubuntu
+   - Download the SSH key pair
+3. SSH into the VM and set up the bot:
+
+```bash
+ssh -i your-key.pem ubuntu@YOUR_VM_IP
+
+# On the VM:
+sudo apt update && sudo apt install -y python3.11 python3.11-venv git
+git clone <your-repo-url>
+cd personal-daily-plan-agent
+python3.11 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+nano .env    # fill in your keys
+```
+
+4. Run as a systemd service:
+
+```bash
+sudo nano /etc/systemd/system/daily-planner.service
+```
 
 ```ini
 [Unit]
@@ -246,53 +375,102 @@ After=network.target
 
 [Service]
 Type=simple
-User=YOUR_USERNAME
-WorkingDirectory=/path/to/personal-daily-plan-agent
-ExecStart=/path/to/personal-daily-plan-agent/.venv/bin/python main.py
+User=ubuntu
+WorkingDirectory=/home/ubuntu/personal-daily-plan-agent
+ExecStart=/home/ubuntu/personal-daily-plan-agent/.venv/bin/python main.py
 Restart=always
 RestartSec=10
-EnvironmentFile=/path/to/personal-daily-plan-agent/.env
+EnvironmentFile=/home/ubuntu/personal-daily-plan-agent/.env
 
 [Install]
 WantedBy=multi-user.target
 ```
 
-Enable and start:
-
 ```bash
 sudo systemctl daemon-reload
 sudo systemctl enable daily-planner
 sudo systemctl start daily-planner
-sudo systemctl status daily-planner
+journalctl -u daily-planner -f    # view logs
 ```
 
-View logs:
+---
+
+### Option 2 — Fly.io Free Tier
+
+Fly.io gives you 3 small VMs (256 MB RAM) free per month — enough for a lightweight bot.
+
+**Setup:**
+
+1. Install the Fly CLI on Mac:
+```bash
+brew install flyctl
+flyctl auth signup
+```
+
+2. Add a `Dockerfile` to the project root:
+
+```dockerfile
+FROM python:3.11-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . .
+CMD ["python", "main.py"]
+```
+
+3. Deploy:
 
 ```bash
-journalctl -u daily-planner -f
+flyctl launch          # creates fly.toml, choose free shared-cpu-1x
+flyctl secrets set TELEGRAM_BOT_TOKEN=... GEMINI_API_KEY=...
+flyctl deploy
 ```
 
-### Option B — nohup (quick and dirty)
+4. View logs:
+```bash
+flyctl logs
+```
+
+> **SQLite note:** Fly's free VMs don't have persistent disk by default. Your database resets on redeploy. To persist it, add a Fly Volume (`flyctl volumes create`) or use the bot for a week before worrying about this — tasks are daily and naturally expire.
+
+---
+
+### Option 3 — PythonAnywhere Free Tier
+
+PythonAnywhere lets you run one always-on background task for free — ideal for a Telegram polling bot.
+
+1. Sign up at [pythonanywhere.com](https://www.pythonanywhere.com)
+2. Open a **Bash console** and clone the repo:
 
 ```bash
-nohup python main.py > bot.log 2>&1 &
-echo $! > bot.pid          # save PID to stop it later
+git clone <your-repo-url>
+cd personal-daily-plan-agent
+python3.11 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+nano .env
 ```
 
-Stop it:
+3. Go to **Tasks** tab → **Always-on tasks** → add:
 
-```bash
-kill $(cat bot.pid)
+```
+/home/YOUR_USERNAME/personal-daily-plan-agent/.venv/bin/python /home/YOUR_USERNAME/personal-daily-plan-agent/main.py
 ```
 
-### Option C — screen / tmux
+4. Click **Create**. The bot runs continuously and restarts if it crashes.
 
-```bash
-screen -S daily-planner
-python main.py
-# Detach: Ctrl+A, D
-# Reattach: screen -r daily-planner
-```
+> **Limitation:** Free accounts have a CPU usage quota per day. For a personal planner with 2 scheduled messages and occasional commands, you'll stay well within it.
+
+---
+
+### Comparison
+
+| Option | Free forever | RAM | Persistent storage | Setup difficulty |
+|---|---|---|---|---|
+| Oracle Cloud | Yes | 1 GB | Yes | Medium |
+| Fly.io | Yes (3 VMs) | 256 MB | Needs volume | Easy |
+| PythonAnywhere | Yes (1 task) | Shared | Yes | Easiest |
 
 ---
 
