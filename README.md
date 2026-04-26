@@ -528,7 +528,7 @@ Your `.env` file is missing or not being loaded. Ensure `.env` exists in the pro
 
 ## AI Model
 
-This bot uses **Google Gemini 1.5 Flash** (`gemini-1.5-flash`) — a free model via Google AI Studio — for:
+This bot uses **Google Gemini 2.0 Flash** (`gemini-2.0-flash`) — a free model via Google AI Studio — for:
 
 - Generating prioritized daily task lists from your calendar events and goals
 - Writing end-of-day summaries that reflect on completed, skipped, and pending tasks
