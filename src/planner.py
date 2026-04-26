@@ -20,12 +20,12 @@ _SUMMARY_SYSTEM = """You are a daily planning assistant. Write brief, honest end
 Keep it under 50 words. Be encouraging but factual. No bullet points — just 2-3 sentences."""
 
 _plan_model = genai.GenerativeModel(
-    model_name="gemini-1.5-flash",
+    model_name="gemini-2.0-flash",
     system_instruction=_PLAN_SYSTEM,
 )
 
 _summary_model = genai.GenerativeModel(
-    model_name="gemini-1.5-flash",
+    model_name="gemini-2.0-flash",
     system_instruction=_SUMMARY_SYSTEM,
 )
 

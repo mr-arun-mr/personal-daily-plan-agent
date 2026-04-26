@@ -216,3 +216,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Google Calendar credentials file (if used)
+credentials.json
+token.json
+
+# Local DB file
+planner.db

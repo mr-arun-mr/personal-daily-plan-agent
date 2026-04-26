@@ -522,6 +522,8 @@ Your `.env` file is missing or not being loaded. Ensure `.env` exists in the pro
 
 - Use `/plan --refresh` only when you want to regenerate; plain `/plan` reuses existing tasks
 
+### Telegram Bot
+![Telegram Bot](src/image/telegram_bot.jpg)
 ---
 
 ## AI Model
